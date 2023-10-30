@@ -43,6 +43,10 @@ router.post("/login", async (req, res) => {
 
         const isPasswordMatch = user.comparePassword(password);
 
+        if (!isPasswordMatch) {
+            console.log("User Not Exist")
+        }
+
         const token = user.getJwtToken();
 
         const options = {
@@ -88,7 +92,7 @@ router.get("/refetch", async (req, res) => {
         }
         res.status(200).json(data);
     });
- 
+
 });
 
 module.exports = router

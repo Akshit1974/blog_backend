@@ -7,9 +7,9 @@ const verifyToken = require("../VerifyToken");
 // Create
 router.post("/create", async (req, res) => {
     try {
-        const { title, desc, username, userId, categories } = req.body;
+        const { title, desc,photo, username, userId, categories } = req.body;
         const post = await Post.create({
-            title, desc, username, userId, categories
+            title, desc, username,photo, userId, categories
         })
         res.status(200).json({
             success: true,
