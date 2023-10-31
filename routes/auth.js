@@ -1,68 +1,74 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/UserSchema");
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 // Register
 router.post("/register", async (req, res) => {
+
+    const { username, email, password } = req.body;
     try {
-        const { username, email, password } = req.body;
-
-        const user = await User.create({
-            username, email, password
-        });
-
-        const token = user.getJwtToken();
-
-        const options = {
-            expires: new Date(
-                Date.now() + 1 * 24 * 60 * 60 * 1000
-            ),
-            httpOnly: true,
+        // Existing user checking
+        const existingUser = await User.findOne({ email: email });
+        if (existingUser) {
+            return res.status(400).json({
+                message: "User already exist"
+            });
         };
 
-        res.status(201).cookie('token', token, options).json({
-            success: true,
-            user,
-            token
+        const hashPassword = await bcrypt.hash(password, 10);
+
+        const result = await User.create({
+            username: username,
+            email: email,
+            password: hashPassword
         });
+
+        const token = jwt.sign({ email: result.email, id: result._id }, "SECRET_KEY");
+
+        res.status(201).json({
+            user: result,
+            token: token
+        });
+
     } catch (error) {
-        res.status(500).json(error);
+        console.log(error);
+        res.status(500).json({ message: "Something went wrong" })
     }
 });
 
 // Login
 router.post("/login", async (req, res) => {
+
+    const { email, password } = req.body;
+
     try {
-        const { email, password } = req.body;
 
-        const user = await User.findOne({ email }).select("+password");
-        if (!user) {
-            console.log("User Not Exist")
-        }
-
-        const isPasswordMatch = user.comparePassword(password);
-
-        if (!isPasswordMatch) {
-            console.log("User Not Exist")
-        }
-
-        const token = user.getJwtToken();
-
-        const options = {
-            expires: new Date(
-                Date.now() + 1 * 24 * 60 * 60 * 1000
-            ),
-            httpOnly: true,
+        const existingUser = await User.findOne({ email: email });
+        if (!existingUser) {
+            return res.status(400).json({
+                message: "User Not Found"
+            });
         };
 
-        res.status(201).cookie('token', token, options).json({
-            success: true,
-            user,
-            token
+        const matchPassword = await bcrypt.compare(password, existingUser.password);
+
+        if (!matchPassword) {
+            return res.status(400).json({ message: "Invalid User" });
+        }
+
+        const token = jwt.sign({ email: existingUser.email, id: existingUser._id }, "SECRET_KEY");
+
+        res.status(201).json({
+            user: existingUser,
+            token: token
         });
+
+
     } catch (error) {
-        res.status(500).json(error);
+        console.log(error);
+        res.status(500).json({ message: "Something went wrong" })
     }
 });
 
